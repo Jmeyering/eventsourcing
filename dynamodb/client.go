@@ -23,7 +23,7 @@ var _ eventsourcing.Client = (*Client)(nil)
 func NewClient(
 	db *dynamodb.Client,
 	table string,
-	resolver map[string]eventsourcing.Applyable,
+	resolver map[string]func() eventsourcing.Applyable,
 ) *Client {
 	reader := NewStreamReader(db, table, resolver)
 	writer := NewStreamWriter(db, table)

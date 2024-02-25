@@ -61,16 +61,18 @@ type PersistedEvent struct {
 
 // toDomainEvent will converrt a PersistedEvent to an DomainEvent
 func toDomainEvent(
-	resolver map[string]eventsourcing.Applyable,
+	resolver map[string]func() eventsourcing.Applyable,
 	e *PersistedEvent,
 ) (eventsourcing.DomainEvent, error) {
-	applyable, found := resolver[e.Name]
+	applyableFN, found := resolver[e.Name]
 	if !found {
 		return eventsourcing.DomainEvent{}, fmt.Errorf(
 			"missing event type in resolver: %s",
 			e.Name,
 		)
 	}
+
+	applyable := applyableFN()
 
 	json.Unmarshal([]byte(e.Payload), applyable)
 
@@ -174,14 +176,14 @@ func eventToRecord(
 //		aggregate := a.(*MyAggregate)
 //		// Do event things here
 // }
-// resolver := map[string]Applyable{
-//		"MyEventV1": &MyEventV1,
+// resolver := map[string]func() Applyable{
+//		"MyEventV1": func() { return &MyEventV1 },
 // }
 // ```
 func NewStreamReader(
 	dynamo *dynamodb.Client,
 	table string,
-	resolver map[string]eventsourcing.Applyable,
+	resolver map[string]func() eventsourcing.Applyable,
 ) StreamReader {
 	return func(
 		ctx context.Context,
