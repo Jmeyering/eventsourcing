@@ -20,12 +20,12 @@ type Aggregate interface {
 	// revert any changes to the aggregate it simply empties the stored changes
 	// from memory.
 	clean()
-	// raise a set of events on the aggregate and apply them. Stores the changed
+	// Raise a set of events on the aggregate and apply them. Stores the changed
 	// events in the set of aggregate changes which allows the new  aggregate
 	// events to be committed to storage
-	raise(...DomainEvent)
-	// apply a set of events to the aggregate
-	apply(...DomainEvent)
+	Raise(...DomainEvent)
+	// Apply a set of events to the aggregate
+	Apply(...DomainEvent)
 }
 
 // Aggregate is an abstraction for an aggregate. An Aggregate is defined as a
@@ -69,7 +69,7 @@ func (b *BaseAggregate) clean() {
 
 // Raise an event into the aggregate changes slice. Also applies the change to
 // the underlying aggregate
-func (b *BaseAggregate) raise(e ...DomainEvent) {
+func (b *BaseAggregate) Raise(e ...DomainEvent) {
 	for _, ev := range e {
 		b.changeEvents = append(b.changeEvents, ev)
 		ev.payload.ApplyTo(b)
@@ -78,7 +78,7 @@ func (b *BaseAggregate) raise(e ...DomainEvent) {
 
 // Apply a change to an aggregate. Does not add this event into the changes
 // slice. Useful when hydrading an Aggregate from persistance
-func (b *BaseAggregate) apply(e ...DomainEvent) {
+func (b *BaseAggregate) Apply(e ...DomainEvent) {
 	for _, ev := range e {
 		ev.payload.ApplyTo(b)
 	}

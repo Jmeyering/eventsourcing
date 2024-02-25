@@ -73,7 +73,7 @@ func (c *DynamoDBClient) Load(
 	}
 
 	for _, ev := range events {
-		base.apply(ev)
+		base.Apply(ev)
 	}
 
 	base.setID(id)
