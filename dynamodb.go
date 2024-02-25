@@ -1,4 +1,4 @@
-package dynamodb
+package eventsourcing
 
 import (
 	"context"
@@ -10,8 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
-
-	"github.com/jmeyering/eventsourcing"
 )
 
 var (
@@ -22,6 +20,86 @@ var (
 	// unable to resolve the underlying Applyable payload.
 	ErrUnknownEvent = errors.New("unknown event")
 )
+
+// DynamoDBClient implements the Client interface and allows reading and
+// writing aggregate events from dynamodb.
+type DynamoDBClient struct {
+	reader StreamReader
+	writer StreamWriter
+}
+
+// NewClient returns a new dynamodb Client. Client must be
+// provided table information along with a resolver which maps event names to
+// underlying applyable payload structs.
+func NewClient(
+	db *dynamodb.Client,
+	table string,
+	resolver map[string]func() Applyable,
+) Client {
+	reader := NewStreamReader(db, table, resolver)
+	writer := NewStreamWriter(db, table)
+	return &DynamoDBClient{
+		reader: reader,
+		writer: writer,
+	}
+}
+
+// StreamReader is able to read events from an event stream
+type StreamReader func(
+	ctx context.Context,
+	aggregateID string,
+) ([]DomainEvent, error)
+
+// StreamWriter is able to write a set of events onto an event stream
+type StreamWriter func(
+	ctx context.Context,
+	events ...DomainEvent,
+) error
+
+// Load hydrates an aggregate with the events within its event stream. Must
+// provide a pointer reference to a blank aggregate as the base to the load
+// function.
+// TODO: Add functionality to validate that we have a blank struct as our base.
+// Potentially add a method on the aggregate `Dirty() bool` or something.
+func (c *DynamoDBClient) Load(
+	ctx context.Context,
+	id string,
+	base Aggregate,
+) error {
+	events, err := c.reader(ctx, id)
+
+	if err != nil {
+		return err
+	}
+
+	for _, ev := range events {
+		base.apply(ev)
+	}
+
+	base.setID(id)
+	base.setVersion(len(events))
+
+	return nil
+}
+
+// Commit an aggregate to dynamodb
+func (c *DynamoDBClient) Commit(
+	ctx context.Context,
+	aggregate Aggregate,
+) error {
+	changes := aggregate.changes()
+	err := c.writer(ctx, changes...)
+
+	if err != nil {
+		return err
+	}
+
+	aggregate.setVersion(aggregate.Version() + len(changes))
+
+	aggregate.clean()
+
+	return nil
+}
 
 // PersistedEvent represents a DomainEvent that is easily persisted to
 // DynamoDB by making all properties exported values
@@ -61,12 +139,12 @@ type PersistedEvent struct {
 
 // toDomainEvent will converrt a PersistedEvent to an DomainEvent
 func toDomainEvent(
-	resolver map[string]func() eventsourcing.Applyable,
+	resolver map[string]func() Applyable,
 	e *PersistedEvent,
-) (eventsourcing.DomainEvent, error) {
+) (DomainEvent, error) {
 	applyableFN, found := resolver[e.Name]
 	if !found {
-		return eventsourcing.DomainEvent{}, fmt.Errorf(
+		return DomainEvent{}, fmt.Errorf(
 			"missing event type in resolver: %s",
 			e.Name,
 		)
@@ -76,7 +154,7 @@ func toDomainEvent(
 
 	json.Unmarshal([]byte(e.Payload), applyable)
 
-	return eventsourcing.NewDomainEvent(
+	return NewDomainEvent(
 		e.AggregateID,
 		applyable,
 	).
@@ -91,7 +169,7 @@ func toDomainEvent(
 
 // ToPersistedEvent will convert an DomainEvent to a
 // PersistedEvent
-func ToPersistedEvent(e eventsourcing.DomainEvent) *PersistedEvent {
+func ToPersistedEvent(e DomainEvent) *PersistedEvent {
 	payloadb, _ := json.Marshal(e.Payload())
 
 	return &PersistedEvent{
@@ -113,10 +191,10 @@ func ToPersistedEvent(e eventsourcing.DomainEvent) *PersistedEvent {
 func NewStreamWriter(
 	dynamo *dynamodb.Client,
 	table string,
-) func(context.Context, ...eventsourcing.DomainEvent) error {
+) func(context.Context, ...DomainEvent) error {
 	return func(
 		ctx context.Context,
-		events ...eventsourcing.DomainEvent,
+		events ...DomainEvent,
 	) error {
 		transactionItems := make([]types.TransactWriteItem, len(events))
 
@@ -170,7 +248,7 @@ func eventToRecord(
 // type MyEventV1 struct{}
 //
 // // Implement Applyable
-// func (ev *MyEventV1) ApplyTo(a eventsourcing.Aggregate) {
+// func (ev *MyEventV1) ApplyTo(a Aggregate) {
 //		aggregate := a.(*MyAggregate)
 //		// Do event things here
 // }
@@ -181,12 +259,12 @@ func eventToRecord(
 func NewStreamReader(
 	dynamo *dynamodb.Client,
 	table string,
-	resolver map[string]func() eventsourcing.Applyable,
+	resolver map[string]func() Applyable,
 ) StreamReader {
 	return func(
 		ctx context.Context,
 		aggregateID string,
-	) ([]eventsourcing.DomainEvent, error) {
+	) ([]DomainEvent, error) {
 
 		agAv, _ := attributevalue.Marshal(aggregateID)
 		out, err := dynamo.Query(
@@ -207,7 +285,7 @@ func NewStreamReader(
 			return nil, err
 		}
 
-		events := make([]eventsourcing.DomainEvent, int(out.Count))
+		events := make([]DomainEvent, int(out.Count))
 		for i, item := range out.Items {
 			e := &PersistedEvent{}
 			err = attributevalue.UnmarshalMap(item, e)

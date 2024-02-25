@@ -129,7 +129,7 @@ func (e DomainEvent) ID() string {
 // from persistence
 func (e DomainEvent) WithID(id string) DomainEvent {
 	e.id = id
-	e.metadata = CopyMap(e.metadata)
+	e.metadata = copyMap(e.metadata)
 
 	return e
 }
@@ -143,7 +143,7 @@ func (e DomainEvent) AggregateID() string {
 // a DomainEvent from persistence
 func (e DomainEvent) WithAggregateID(id string) DomainEvent {
 	e.aggregateID = id
-	e.metadata = CopyMap(e.metadata)
+	e.metadata = copyMap(e.metadata)
 	return e
 }
 
@@ -152,20 +152,20 @@ func (e DomainEvent) WithAggregateID(id string) DomainEvent {
 // entire metadata object, of `WithAddtionalMetadata` to append data to event
 // metadata.
 func (e DomainEvent) Metadata() map[string]any {
-	return CopyMap(e.metadata)
+	return copyMap(e.metadata)
 }
 
 // WithMetadata will reset the metadata of the event with the given map. Helpful
 // when hydrating a DomainEvent from persistence
 func (e DomainEvent) WithMetadata(m map[string]any) DomainEvent {
-	e.metadata = CopyMap(m)
+	e.metadata = copyMap(m)
 	return e
 }
 
 // WithAddtionalMetadata will add additional metadata to an event and return a
 // copy of the event.
 func (e DomainEvent) WithAddtionalMetadata(m map[string]any) DomainEvent {
-	metadata := CopyMap(e.metadata)
+	metadata := copyMap(e.metadata)
 
 	for k, v := range m {
 		metadata[k] = v
@@ -183,7 +183,7 @@ func (e DomainEvent) Payload() Applyable {
 // WithPayload adds an Applyable payload to the event.
 func (e DomainEvent) WithPayload(b Applyable) DomainEvent {
 	e.payload = b
-	e.metadata = CopyMap(e.metadata)
+	e.metadata = copyMap(e.metadata)
 	return e
 }
 
@@ -196,7 +196,7 @@ func (e DomainEvent) StreamRevision() int {
 // WithStreamRevision will assign the event number to a given event.
 func (e DomainEvent) WithStreamRevision(n int) DomainEvent {
 	e.streamRevision = n
-	e.metadata = CopyMap(e.metadata)
+	e.metadata = copyMap(e.metadata)
 	return e
 }
 
@@ -208,7 +208,7 @@ func (e DomainEvent) Name() string {
 // DomainEvent from persistence.
 func (e DomainEvent) WithName(val string) DomainEvent {
 	e.name = val
-	e.metadata = CopyMap(e.metadata)
+	e.metadata = copyMap(e.metadata)
 	return e
 }
 
@@ -220,7 +220,7 @@ func (e DomainEvent) Version() int {
 // WithVersion will assign the event version to the metadata.
 func (e DomainEvent) WithVersion(version int) DomainEvent {
 	e.version = version
-	e.metadata = CopyMap(e.metadata)
+	e.metadata = copyMap(e.metadata)
 	return e
 }
 
@@ -231,7 +231,7 @@ func (e DomainEvent) Source() string {
 // WithSource will return a new DomainEvent with the included source information
 func (e DomainEvent) WithSource(value string) DomainEvent {
 	e.source = value
-	e.metadata = CopyMap(e.metadata)
+	e.metadata = copyMap(e.metadata)
 	return e
 }
 
@@ -242,7 +242,7 @@ func (e DomainEvent) Actor() string {
 // WithActor will return a new DomainEvent with the included actor information
 func (e DomainEvent) WithActor(value string) DomainEvent {
 	e.actor = value
-	e.metadata = CopyMap(e.metadata)
+	e.metadata = copyMap(e.metadata)
 	return e
 }
 
@@ -255,7 +255,7 @@ func (e DomainEvent) TS() int {
 // Helpful when hydrating a DomainEvent from persistence.
 func (e DomainEvent) WithTS(value int) DomainEvent {
 	e.ts = value
-	e.metadata = CopyMap(e.metadata)
+	e.metadata = copyMap(e.metadata)
 	return e
 }
 
@@ -277,9 +277,9 @@ func (e DomainEvent) CorrelateWith(ev DomainEvent) DomainEvent {
 	})
 }
 
-// CopyMap is a helper function to copy a map to create immutable events with
+// copyMap is a helper function to copy a map to create immutable events with
 // all methods
-func CopyMap(m map[string]any) map[string]any {
+func copyMap(m map[string]any) map[string]any {
 	cp := make(map[string]any)
 	for k, v := range m {
 		cp[k] = v
