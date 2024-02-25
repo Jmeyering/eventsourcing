@@ -3,6 +3,7 @@ package eventsourcing
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/google/uuid"
@@ -71,7 +72,6 @@ type Applyable interface {
 // current timestamp
 func NewDomainEvent(
 	aggregateID string,
-	eventName string,
 	payload Applyable,
 ) DomainEvent {
 	ts := int(time.Now().Unix())
@@ -81,7 +81,7 @@ func NewDomainEvent(
 		payload:     payload,
 		aggregateID: aggregateID,
 		id:          eventID,
-		name:        eventName,
+		name:        structName(payload),
 		ts:          ts,
 		metadata: map[string]any{
 			CorrelationKey: eventID,
@@ -101,16 +101,16 @@ func (e DomainEvent) OK() error {
 		err = fmt.Errorf("%w %s", err, "missing EventID")
 	}
 
-	if e.name == "" {
-		err = fmt.Errorf("%w %s", err, "missing EventName")
-	}
-
 	if e.source == "" {
 		err = fmt.Errorf("%w %s", err, "missing Source")
 	}
 
 	if e.payload == nil {
 		err = fmt.Errorf("%w %s", err, "missing Payload")
+	}
+
+	if e.name == "" {
+		err = fmt.Errorf("%w %s", err, "missing EventName")
 	}
 
 	if err != nil {
@@ -286,4 +286,12 @@ func CopyMap(m map[string]any) map[string]any {
 	}
 
 	return cp
+}
+
+func structName(myvar any) string {
+	if t := reflect.TypeOf(myvar); t.Kind() == reflect.Ptr {
+		return t.Elem().Name()
+	} else {
+		return t.Name()
+	}
 }

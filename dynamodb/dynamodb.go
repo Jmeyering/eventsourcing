@@ -78,8 +78,7 @@ func toDomainEvent(
 
 	return eventsourcing.NewDomainEvent(
 		e.AggregateID,
-		e.Name,
-		nil,
+		applyable,
 	).
 		WithID(e.ID).
 		WithMetadata(e.Metadata).
@@ -87,8 +86,7 @@ func toDomainEvent(
 		WithVersion(e.Version).
 		WithActor(e.Actor).
 		WithSource(e.Source).
-		WithTS(e.TS).
-		WithPayload(applyable), nil
+		WithTS(e.TS), nil
 }
 
 // ToPersistedEvent will convert an DomainEvent to a
