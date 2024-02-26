@@ -34,7 +34,7 @@ type DynamoDBClient struct {
 func NewClient(
 	db *dynamodb.Client,
 	table string,
-	resolver map[string]func() Applyable,
+	resolver map[string]EventResolver,
 ) Client {
 	reader := NewStreamReader(db, table, resolver)
 	writer := NewStreamWriter(db, table)
@@ -139,7 +139,7 @@ type PersistedEvent struct {
 
 // toDomainEvent will converrt a PersistedEvent to an DomainEvent
 func toDomainEvent(
-	resolver map[string]func() Applyable,
+	resolver map[string]EventResolver,
 	e *PersistedEvent,
 ) (DomainEvent, error) {
 	applyableFN, found := resolver[e.Name]
@@ -252,14 +252,14 @@ func eventToRecord(
 //		aggregate := a.(*MyAggregate)
 //		// Do event things here
 // }
-// resolver := map[string]func() Applyable{
+// resolver := map[string]eventsourcing.EventResolver{
 //		"MyEventV1": func() { return &MyEventV1 },
 // }
 // ```
 func NewStreamReader(
 	dynamo *dynamodb.Client,
 	table string,
-	resolver map[string]func() Applyable,
+	resolver map[string]EventResolver,
 ) StreamReader {
 	return func(
 		ctx context.Context,

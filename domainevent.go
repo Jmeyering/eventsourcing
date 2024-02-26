@@ -68,6 +68,8 @@ type Applyable interface {
 	ApplyTo(Aggregate)
 }
 
+type EventResolver func() Applyable
+
 // NewDomainEvent returns a new DomainEvent and sets a new uuid ID and the
 // current timestamp
 func NewDomainEvent(
