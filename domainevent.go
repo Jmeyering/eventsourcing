@@ -65,9 +65,10 @@ type DomainEvent struct {
 // Applyable is intended to represent an event payload that is able to be
 // applied to an aggregate
 type Applyable interface {
-	ApplyTo(Aggregate)
+	ApplyTo(IAggregate)
 }
 
+// EventResolver returns an Applyable
 type EventResolver func() Applyable
 
 // NewDomainEvent returns a new DomainEvent and sets a new uuid ID and the

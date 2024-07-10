@@ -64,7 +64,7 @@ type StreamWriter func(
 func (c *DynamoDBClient) Load(
 	ctx context.Context,
 	id string,
-	base Aggregate,
+	base *Aggregate,
 ) error {
 	events, err := c.reader(ctx, id)
 
@@ -85,7 +85,7 @@ func (c *DynamoDBClient) Load(
 // Commit an aggregate to dynamodb
 func (c *DynamoDBClient) Commit(
 	ctx context.Context,
-	aggregate Aggregate,
+	aggregate *Aggregate,
 ) error {
 	changes := aggregate.changes()
 	err := c.writer(ctx, changes...)
@@ -248,13 +248,16 @@ func eventToRecord(
 // type MyEventV1 struct{}
 //
 // // Implement Applyable
-// func (ev *MyEventV1) ApplyTo(a Aggregate) {
-//		aggregate := a.(*MyAggregate)
-//		// Do event things here
-// }
-// resolver := map[string]eventsourcing.EventResolver{
-//		"MyEventV1": func() { return &MyEventV1 },
-// }
+//
+//	func (ev *MyEventV1) ApplyTo(a Aggregate) {
+//			aggregate := a.(*MyAggregate)
+//			// Do event things here
+//	}
+//
+//	resolver := map[string]eventsourcing.EventResolver{
+//			"MyEventV1": func() { return &MyEventV1 },
+//	}
+//
 // ```
 func NewStreamReader(
 	dynamo *dynamodb.Client,
