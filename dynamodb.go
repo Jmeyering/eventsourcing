@@ -48,12 +48,12 @@ func NewClient(
 type StreamReader func(
 	ctx context.Context,
 	aggregateID string,
-) ([]DomainEvent, error)
+) ([]Event, error)
 
 // StreamWriter is able to write a set of events onto an event stream
 type StreamWriter func(
 	ctx context.Context,
-	events ...DomainEvent,
+	events ...Event,
 ) error
 
 // Load hydrates an aggregate with the events within its event stream. Must
@@ -141,10 +141,10 @@ type PersistedEvent struct {
 func toDomainEvent(
 	resolver map[string]EventResolver,
 	e *PersistedEvent,
-) (DomainEvent, error) {
+) (Event, error) {
 	applyableFN, found := resolver[e.Name]
 	if !found {
-		return DomainEvent{}, fmt.Errorf(
+		return Event{}, fmt.Errorf(
 			"missing event type in resolver: %s",
 			e.Name,
 		)
@@ -154,10 +154,10 @@ func toDomainEvent(
 
 	json.Unmarshal([]byte(e.Payload), applyable)
 
-	return NewDomainEvent(
-		e.AggregateID,
+	return NewEvent(
 		applyable,
 	).
+		WithAggregateID(e.AggregateID).
 		WithID(e.ID).
 		WithMetadata(e.Metadata).
 		WithStreamRevision(e.StreamRevision).
@@ -169,7 +169,7 @@ func toDomainEvent(
 
 // ToPersistedEvent will convert an DomainEvent to a
 // PersistedEvent
-func ToPersistedEvent(e DomainEvent) *PersistedEvent {
+func ToPersistedEvent(e Event) *PersistedEvent {
 	payloadb, _ := json.Marshal(e.Payload())
 
 	return &PersistedEvent{
@@ -191,10 +191,10 @@ func ToPersistedEvent(e DomainEvent) *PersistedEvent {
 func NewStreamWriter(
 	dynamo *dynamodb.Client,
 	table string,
-) func(context.Context, ...DomainEvent) error {
+) func(context.Context, ...Event) error {
 	return func(
 		ctx context.Context,
-		events ...DomainEvent,
+		events ...Event,
 	) error {
 		transactionItems := make([]types.TransactWriteItem, len(events))
 
@@ -267,7 +267,7 @@ func NewStreamReader(
 	return func(
 		ctx context.Context,
 		aggregateID string,
-	) ([]DomainEvent, error) {
+	) ([]Event, error) {
 
 		agAv, _ := attributevalue.Marshal(aggregateID)
 		out, err := dynamo.Query(
@@ -288,7 +288,7 @@ func NewStreamReader(
 			return nil, err
 		}
 
-		events := make([]DomainEvent, int(out.Count))
+		events := make([]Event, int(out.Count))
 		for i, item := range out.Items {
 			e := &PersistedEvent{}
 			err = attributevalue.UnmarshalMap(item, e)

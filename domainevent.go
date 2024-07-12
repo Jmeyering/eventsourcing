@@ -24,11 +24,11 @@ var (
 	CausationKey = "$causationID"
 )
 
-// DomainEvent is the primary unit within the eventsourcing system. It's
+// Event is the primary unit within the eventsourcing system. It's
 // designed intentionally to not have exposed properties in order to ensure
 // idempotency of the payload and metadata. This prevents unexpected side
-// effects to DomainEvent data.
-type DomainEvent struct {
+// effects to Event data.
+type Event struct {
 	// id is the unique identifier for this event. able to be used for
 	// idempotency
 	id string
@@ -71,21 +71,19 @@ type Applyable interface {
 // EventResolver returns an Applyable
 type EventResolver func() Applyable
 
-// NewDomainEvent returns a new DomainEvent and sets a new uuid ID and the
+// NewEvent returns a new DomainEvent and sets a new uuid ID and the
 // current timestamp
-func NewDomainEvent(
-	aggregateID string,
+func NewEvent(
 	payload Applyable,
-) DomainEvent {
+) Event {
 	ts := int(time.Now().Unix())
 	eventID := uuid.NewString()
 
-	return DomainEvent{
-		payload:     payload,
-		aggregateID: aggregateID,
-		id:          eventID,
-		name:        structName(payload),
-		ts:          ts,
+	return Event{
+		payload: payload,
+		id:      eventID,
+		name:    structName(payload),
+		ts:      ts,
 		metadata: map[string]any{
 			CorrelationKey: eventID,
 			CausationKey:   eventID,
@@ -94,7 +92,7 @@ func NewDomainEvent(
 }
 
 // OK validates that a DomainEvent is valid for raising into the stream.
-func (e DomainEvent) OK() error {
+func (e Event) OK() error {
 	var err error
 	if e.aggregateID == "" {
 		err = fmt.Errorf("%w %s", err, "missing AggregateID")
@@ -124,13 +122,13 @@ func (e DomainEvent) OK() error {
 }
 
 // ID access
-func (e DomainEvent) ID() string {
+func (e Event) ID() string {
 	return e.id
 }
 
 // WithID will set the id on the event. Helpful when hydrating a DomainEvent
 // from persistence
-func (e DomainEvent) WithID(id string) DomainEvent {
+func (e Event) WithID(id string) Event {
 	e.id = id
 	e.metadata = copyMap(e.metadata)
 
@@ -138,13 +136,13 @@ func (e DomainEvent) WithID(id string) DomainEvent {
 }
 
 // AggregateID returns the id of the aggregate
-func (e DomainEvent) AggregateID() string {
+func (e Event) AggregateID() string {
 	return e.aggregateID
 }
 
 // WithAggregateID will set the aggregateID on the event. Helpful when hydrating
 // a DomainEvent from persistence
-func (e DomainEvent) WithAggregateID(id string) DomainEvent {
+func (e Event) WithAggregateID(id string) Event {
 	e.aggregateID = id
 	e.metadata = copyMap(e.metadata)
 	return e
@@ -154,20 +152,20 @@ func (e DomainEvent) WithAggregateID(id string) DomainEvent {
 // be mutated directly from the returned copy. Use `WithMetadata` to set the
 // entire metadata object, of `WithAddtionalMetadata` to append data to event
 // metadata.
-func (e DomainEvent) Metadata() map[string]any {
+func (e Event) Metadata() map[string]any {
 	return copyMap(e.metadata)
 }
 
 // WithMetadata will reset the metadata of the event with the given map. Helpful
 // when hydrating a DomainEvent from persistence
-func (e DomainEvent) WithMetadata(m map[string]any) DomainEvent {
+func (e Event) WithMetadata(m map[string]any) Event {
 	e.metadata = copyMap(m)
 	return e
 }
 
 // WithAddtionalMetadata will add additional metadata to an event and return a
 // copy of the event.
-func (e DomainEvent) WithAddtionalMetadata(m map[string]any) DomainEvent {
+func (e Event) WithAddtionalMetadata(m map[string]any) Event {
 	metadata := copyMap(e.metadata)
 
 	for k, v := range m {
@@ -179,12 +177,12 @@ func (e DomainEvent) WithAddtionalMetadata(m map[string]any) DomainEvent {
 }
 
 // Payload returns the applyable payload of the event
-func (e DomainEvent) Payload() Applyable {
+func (e Event) Payload() Applyable {
 	return e.payload
 }
 
 // WithPayload adds an Applyable payload to the event.
-func (e DomainEvent) WithPayload(b Applyable) DomainEvent {
+func (e Event) WithPayload(b Applyable) Event {
 	e.payload = b
 	e.metadata = copyMap(e.metadata)
 	return e
@@ -192,71 +190,71 @@ func (e DomainEvent) WithPayload(b Applyable) DomainEvent {
 
 // StreamRevision is the incrementing event number within an aggregate event
 // stream
-func (e DomainEvent) StreamRevision() int {
+func (e Event) StreamRevision() int {
 	return e.streamRevision
 }
 
 // WithStreamRevision will assign the event number to a given event.
-func (e DomainEvent) WithStreamRevision(n int) DomainEvent {
+func (e Event) WithStreamRevision(n int) Event {
 	e.streamRevision = n
 	e.metadata = copyMap(e.metadata)
 	return e
 }
 
-func (e DomainEvent) Name() string {
+func (e Event) Name() string {
 	return e.name
 }
 
 // WithName will assign a name to a given event. Helpful when hydrating a
 // DomainEvent from persistence.
-func (e DomainEvent) WithName(val string) DomainEvent {
+func (e Event) WithName(val string) Event {
 	e.name = val
 	e.metadata = copyMap(e.metadata)
 	return e
 }
 
 // Version access
-func (e DomainEvent) Version() int {
+func (e Event) Version() int {
 	return e.version
 }
 
 // WithVersion will assign the event version to the metadata.
-func (e DomainEvent) WithVersion(version int) DomainEvent {
+func (e Event) WithVersion(version int) Event {
 	e.version = version
 	e.metadata = copyMap(e.metadata)
 	return e
 }
 
-func (e DomainEvent) Source() string {
+func (e Event) Source() string {
 	return e.source
 }
 
 // WithSource will return a new DomainEvent with the included source information
-func (e DomainEvent) WithSource(value string) DomainEvent {
+func (e Event) WithSource(value string) Event {
 	e.source = value
 	e.metadata = copyMap(e.metadata)
 	return e
 }
 
-func (e DomainEvent) Actor() string {
+func (e Event) Actor() string {
 	return e.actor
 }
 
 // WithActor will return a new DomainEvent with the included actor information
-func (e DomainEvent) WithActor(value string) DomainEvent {
+func (e Event) WithActor(value string) Event {
 	e.actor = value
 	e.metadata = copyMap(e.metadata)
 	return e
 }
 
 // TS access
-func (e DomainEvent) TS() int {
+func (e Event) TS() int {
 	return e.ts
 }
 
 // WithTS will return a new DomainEvent with the included ts information.
 // Helpful when hydrating a DomainEvent from persistence.
-func (e DomainEvent) WithTS(value int) DomainEvent {
+func (e Event) WithTS(value int) Event {
 	e.ts = value
 	e.metadata = copyMap(e.metadata)
 	return e
@@ -266,7 +264,7 @@ func (e DomainEvent) WithTS(value int) DomainEvent {
 // whatever correlation id was set to in the target event. If no correlation ID
 // is present in the target event, we will correlate with the ID of the target
 // event.
-func (e DomainEvent) CorrelateWith(ev DomainEvent) DomainEvent {
+func (e Event) CorrelateWith(ev Event) Event {
 	correlation, ok := ev.metadata[CorrelationKey]
 	if !ok {
 		correlation = ev.ID()

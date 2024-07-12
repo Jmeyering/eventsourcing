@@ -17,7 +17,7 @@ func (c ChangeNameEvent) ApplyTo(a IAggregate) {
 	data.Name = c.Name
 }
 
-func TestAggregate(t *testing.T) {
+func TestAggregateApply(t *testing.T) {
 	test := &MockData{
 		Name: "foo",
 	}
@@ -28,16 +28,24 @@ func TestAggregate(t *testing.T) {
 	)
 
 	aggregate.Apply(
-		NewDomainEvent(
-			aggregate.ID(),
+		NewEvent(
 			ChangeNameEvent{
 				Name: "bar",
+			},
+		),
+		NewEvent(
+			ChangeNameEvent{
+				Name: "bang",
 			},
 		),
 	)
 
 	newActual, _ := aggregate.Data().(*MockData)
-	if newActual.Name != "bar" {
-		t.Errorf("aggregate value not saved correctly after event")
+	if newActual.Name != "bang" {
+		t.Errorf(
+			"aggregate value not saved correctly after event,\nexpected: %s\nactual: %s",
+			"bar",
+			newActual.Name,
+		)
 	}
 }

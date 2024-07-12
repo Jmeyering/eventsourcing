@@ -12,9 +12,9 @@ type IAggregate interface {
 	// Raise a set of events on the aggregate and apply them. Stores the changed
 	// events in the set of aggregate changes which allows the new  aggregate
 	// events to be committed to storage
-	Raise(...DomainEvent)
+	Raise(...Event)
 	// Apply a set of events to the aggregate
-	Apply(...DomainEvent)
+	Apply(...Event)
 	Data() any
 }
 
@@ -33,7 +33,7 @@ type Aggregate struct {
 	data          any
 	version       int
 	aggregateType string
-	changeEvents  []DomainEvent
+	changeEvents  []Event
 }
 
 // ID of the base aggregate
@@ -65,28 +65,30 @@ func (b *Aggregate) setVersion(val int) {
 }
 
 // changes that have been raised into the aggregate
-func (b *Aggregate) changes() []DomainEvent {
+func (b *Aggregate) changes() []Event {
 	return b.changeEvents
 }
 
 // clean resets the aggregate changes to an empty slice
 func (b *Aggregate) clean() {
-	b.changeEvents = []DomainEvent{}
+	b.changeEvents = []Event{}
 }
 
 // Raise an event into the aggregate changes slice. Also applies the change to
 // the underlying aggregate
-func (b *Aggregate) Raise(e ...DomainEvent) {
+func (b *Aggregate) Raise(e ...Event) {
 	for _, ev := range e {
-		b.changeEvents = append(b.changeEvents, ev)
-		ev.payload.ApplyTo(b)
+		agEv := ev.WithAggregateID(b.ID())
+		b.changeEvents = append(b.changeEvents, agEv)
+		agEv.payload.ApplyTo(b)
 	}
 }
 
 // Apply a change to an aggregate. Does not add this event into the changes
 // slice. Useful when hydrading an Aggregate from persistance
-func (b *Aggregate) Apply(e ...DomainEvent) {
+func (b *Aggregate) Apply(e ...Event) {
 	for _, ev := range e {
-		ev.payload.ApplyTo(b)
+		agEv := ev.WithAggregateID(b.ID())
+		agEv.payload.ApplyTo(b)
 	}
 }
