@@ -242,21 +242,24 @@ func eventToRecord(
 // event stream.
 //
 // Caller must provide a resolver which is able to map event names to concrete
-// instances of Applyable payloads.
+// instances of Applyable payloads. The keys of the resolver must match the
+// struct name of the associated event
 //
 // ```golang
 // type MyEventV1 struct{}
 //
 // // Implement Applyable
 //
-//	func (ev *MyEventV1) ApplyTo(a Aggregate) {
-//			aggregate := a.(*MyAggregate)
-//			// Do event things here
+//	func (ev *MyEventV1) ApplyTo(a *Aggregate) {
+//			aggregate := a.Data().(*MyAggregate)
+//			// aggregate mutation happens here
 //	}
 //
 //	resolver := map[string]eventsourcing.EventResolver{
 //			"MyEventV1": func() { return &MyEventV1 },
 //	}
+//
+//	reader := NewStreamReader(db, "table-name", resolver)
 //
 // ```
 func NewStreamReader(

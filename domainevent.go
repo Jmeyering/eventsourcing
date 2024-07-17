@@ -3,10 +3,9 @@ package eventsourcing
 import (
 	"errors"
 	"fmt"
+	"github.com/oklog/ulid/v2"
 	"reflect"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 var (
@@ -65,19 +64,19 @@ type Event struct {
 // Applyable is intended to represent an event payload that is able to be
 // applied to an aggregate
 type Applyable interface {
-	ApplyTo(IAggregate)
+	ApplyTo(*Aggregate)
 }
 
 // EventResolver returns an Applyable
 type EventResolver func() Applyable
 
-// NewEvent returns a new DomainEvent and sets a new uuid ID and the
+// NewEvent returns a new DomainEvent and sets a new ID and the
 // current timestamp
 func NewEvent(
 	payload Applyable,
 ) Event {
 	ts := int(time.Now().Unix())
-	eventID := uuid.NewString()
+	eventID := ulid.Make()
 
 	return Event{
 		payload: payload,

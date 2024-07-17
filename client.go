@@ -6,8 +6,8 @@ type LoadOptions struct {
 }
 
 type Client interface {
-	// Load an aggregate from persistance
-	Load(context.Context, string, *Aggregate) error
+	// Load and hydrate aggregate from events
+	Load(ctx context.Context, id string, base *Aggregate) error
 	// Commit aggregate changes to persistance
-	Commit(context.Context, *Aggregate) error
+	Commit(ctx context.Context, aggregate *Aggregate) error
 }

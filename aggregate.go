@@ -1,39 +1,24 @@
 package eventsourcing
 
-// IAggregate represents an abstract entity stored within an individual event
-// stream. Aggregates are able to be Loaded from event storage, and able to
-// raise events back into that event stream.
-type IAggregate interface {
-	// ID returns the id of the aggregate
-	ID() string
-	// Version returns the current version of the aggregate, equal to the
-	// number of events that are in the aggregate event stream
-	Version() int
-	// Raise a set of events on the aggregate and apply them. Stores the changed
-	// events in the set of aggregate changes which allows the new  aggregate
-	// events to be committed to storage
-	Raise(...Event)
-	// Apply a set of events to the aggregate
-	Apply(...Event)
-	Data() any
-}
-
-func NewAggregate(id string, data any) IAggregate {
-	return &Aggregate{
-		id:      id,
-		data:    data,
-		version: 0,
-	}
-}
-
 // Aggregate is defined as a struct that is able to return it's ID and it's
 // version.
 type Aggregate struct {
-	id            string
-	data          any
-	version       int
-	aggregateType string
-	changeEvents  []Event
+	id           string
+	data         any
+	version      int
+	changeEvents []Event
+}
+
+// NewAggregate return a new aggregate with the given id.
+func NewAggregate(
+	id string,
+	base any,
+) *Aggregate {
+	return &Aggregate{
+		id:      id,
+		data:    base,
+		version: 0,
+	}
 }
 
 // ID of the base aggregate
